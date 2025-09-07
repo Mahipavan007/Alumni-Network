@@ -1,0 +1,619 @@
+import React from 'react';
+import { Container, Typography } from '@mui/material';
+
+const TabPanel = ({ children, value, index, ...other }) => {
+  return (
+    <div role="tabpanel" hidden={value !== index} {...other}>
+      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
+    </div>
+  );
+};
+
+const ActivityList = ({ items, type }) => {
+  if (!items?.length) {
+    return <Typography color="text.secondary">No {type} found</Typography>;
+  }
+  return (
+    <Grid container spacing={2}>
+      {items.map((item, index) => (
+        <Grid item xs={12} key={index}>
+          <Paper variant="outlined" sx={{ p: 2 }}>
+            <Typography variant="body1">{item.content}</Typography>
+            <Typography variant="caption" color="text.secondary">
+              {new Date(item.createdAt).toLocaleDateString()}
+            </Typography>
+          </Paper>
+        </Grid>
+      ))}
+    </Grid>
+  );
+};
+import Timeline from '@mui/lab/Timeline';
+import TimelineItem from '@mui/lab/TimelineItem';
+import TimelineSeparator from '@mui/lab/TimelineSeparator';
+import TimelineConnector from '@mui/lab/TimelineConnector';
+import TimelineContent from '@mui/lab/TimelineContent';
+import TimelineDot from '@mui/lab/TimelineDot';
+import TimelineOppositeContent from '@mui/lab/TimelineOppositeContent';
+import {
+  School as SchoolIcon,
+  Edit as EditIcon,
+  LocationOn as LocationIcon,
+  Work as WorkIcon,
+  Group as GroupIcon,
+  CalendarMonth as CalendarIcon,
+  ThumbUp as EndorseIcon,
+  Email as EmailIcon,
+} from '@mui/icons-material';
+import { userAPI, postAPI } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
+import { getAvatarColor } from '../utils/helpers';
+import LoadingSpinner from '../components/LoadingSpinner';
+
+const TabPanel = (props) => {
+  const { children, value, index, ...other } = props;
+  return (
+    <div role="tabpanel" hidden={value !== index} {...other}>
+      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
+    </div>
+  );
+};
+
+const ActivityList = ({ items, type }) => {
+  if (!items?.length) {
+    return <Typography color="text.secondary">No {type} found</Typography>;
+  }
+  return (
+    <Grid container spacing={2}>
+      {items.map((item, index) => (
+        <Grid item xs={12} key={index}>
+          <Paper variant="outlined" sx={{ p: 2 }}>
+            <Typography variant="body1">{item.content}</Typography>
+            <Typography variant="caption" color="text.secondary">
+              {new Date(item.createdAt).toLocaleDateString()}
+            </Typography>
+          </Paper>
+        </Grid>
+      ))}
+    </Grid>
+  );
+};
+import {
+  Container,
+  Card,
+  CardContent,
+  Typography,
+  Box,
+  Avatar,
+  Grid,
+  Paper,
+  Button,
+  Tabs,
+  Tab,
+  Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+} from '@mui/material';
+import Timeline from '@mui/lab/Timeline';
+import TimelineItem from '@mui/lab/TimelineItem';
+import TimelineSeparator from '@mui/lab/TimelineSeparator';
+import TimelineConnector from '@mui/lab/TimelineConnector';
+import TimelineContent from '@mui/lab/TimelineContent';
+import TimelineDot from '@mui/lab/TimelineDot';
+import TimelineOppositeContent from '@mui/lab/TimelineOppositeContent';
+import {
+  School as SchoolIcon,
+  Email as EmailIcon,
+  CalendarMonth as CalendarIcon,
+  Edit as EditIcon,
+  LocationOn as LocationIcon,
+  Work as WorkIcon,
+  Phone as PhoneIcon,
+  LinkedIn as LinkedInIcon,
+  Group as GroupIcon,
+  Topic as TopicIcon,
+  ThumbUp as EndorseIcon,
+} from '@mui/icons-material';
+import { userAPI, postAPI } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
+import { getAvatarColor } from '../utils/helpers';
+import LoadingSpinner from '../components/LoadingSpinner';
+
+const TabPanel = (props) => {
+  const { children, value, index, ...other } = props;
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`profile-tabpanel-${index}`}
+      aria-labelledby={`profile-tab-${index}`}
+      {...other}
+    >
+      {value === index && (
+        <Box sx={{ p: 3 }}>
+          {children}
+        </Box>
+      )}
+    </div>
+  );
+};
+
+const ActivityList = ({ items, type }) => {
+  if (!items?.length) {
+    return <Typography color="text.secondary">No {type} found</Typography>;
+  }
+
+  return (
+    <Grid container spacing={2}>
+      {items.map((item, index) => (
+        <Grid item xs={12} key={index}>
+          <Paper variant="outlined" sx={{ p: 2 }}>
+            <Typography variant="body1">{item.content}</Typography>
+            <Typography variant="caption" color="text.secondary">
+              {new Date(item.createdAt).toLocaleDateString()}
+            </Typography>
+          </Paper>
+        </Grid>
+      ))}
+    </Grid>
+  );
+};
+
+const Profile = () => {
+  const { currentUser } = useAuth();
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [tabValue, setTabValue] = useState(0);
+  const [posts, setPosts] = useState([]);
+  const [groups, setGroups] = useState([]);
+  const [topics, setTopics] = useState([]);
+  const [showEndorseDialog, setShowEndorseDialog] = useState(false);
+  const [selectedSkill, setSelectedSkill] = useState(null);
+  const [endorsementNote, setEndorsementNote] = useState('');
+  const isOwnProfile = currentUser?.id === user?.id;
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        if (currentUser?.id) {
+          const { data } = await userAPI.getProfile(currentUser.id);
+          setUser(data.user);
+
+          // Fetch additional data
+          const [postsData, groupsData, topicsData] = await Promise.all([
+            postAPI.getUserPosts(currentUser.id),
+            userAPI.getUserGroups(currentUser.id),
+            userAPI.getUserTopics(currentUser.id),
+          ]);
+          
+          setPosts(postsData?.data || []);
+          setGroups(groupsData?.data || []);
+          setTopics(topicsData?.data || []);
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [currentUser]);
+
+  if (loading || !currentUser) {
+    return <LoadingSpinner />;
+  }
+
+  return (
+    <Container maxWidth="md" sx={{ py: 4 }}>
+      <Card sx={{ mb: 4 }}>
+        <Box
+          sx={{
+            height: 150,
+            bgcolor: 'primary.light',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }}
+        />
+        
+        <CardContent sx={{ position: 'relative', mt: -8, px: 3, pb: 3 }}>
+          <Box sx={{ textAlign: 'center', mb: 4 }}>
+            <Avatar
+              src={currentUser.profilePicture}
+              sx={{
+                width: 150,
+                height: 150,
+                mx: 'auto',
+                border: '4px solid white',
+                mb: 2,
+                bgcolor: getAvatarColor(currentUser.firstName + ' ' + currentUser.lastName),
+                fontSize: '3rem'
+              }}
+            >
+              {currentUser.firstName?.[0]}{currentUser.lastName?.[0]}
+            </Avatar>
+            
+            <Typography variant="h4" sx={{ mb: 1, fontWeight: 'bold' }}>
+              {currentUser.firstName} {currentUser.lastName}
+            </Typography>
+            
+            {currentUser.currentPosition && (
+              <Typography variant="h6" color="text.secondary" gutterBottom>
+                {currentUser.currentPosition}
+                {currentUser.company && ` at ${currentUser.company}`}
+              </Typography>
+            )}
+          </Box>
+
+          <Paper sx={{ p: 3 }}>
+            <Grid container spacing={3}>
+              <Grid item xs={12} sm={6}>
+                <Box display="flex" alignItems="center" gap={1} mb={2}>
+                  <SchoolIcon color="primary" />
+                  <Box>
+                    <Typography variant="subtitle2" color="text.secondary">
+                      Education
+                    </Typography>
+                    <Typography>
+                      {currentUser.course || currentUser.major || 'Not specified'}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Class of {currentUser.graduationYear || 'Not specified'}
+                    </Typography>
+                  </Box>
+                </Box>
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <Box display="flex" alignItems="center" gap={1} mb={2}>
+                  <EmailIcon color="primary" />
+                  <Box>
+                    <Typography variant="subtitle2" color="text.secondary">
+                      Email
+                    </Typography>
+                    <Typography>{currentUser.email}</Typography>
+                  </Box>
+                </Box>
+              </Grid>
+
+              <Grid item xs={12}>
+                <Box>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    About
+                  </Typography>
+                  <Typography>
+                    {currentUser.bio || 'No bio provided yet.'}
+                  </Typography>
+                </Box>
+              </Grid>
+            </Grid>
+          </Paper>
+        </CardContent>
+      </Card>
+    </Container>
+  );
+};
+
+export default Profile;
+  const { currentUser } = useAuth();
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const { data } = await userAPI.getProfile(id);
+        setUser(data.user);
+        
+        // Fetch additional data
+        const [postsData, groupsData, topicsData] = await Promise.all([
+          postAPI.getUserPosts(id),
+          userAPI.getUserGroups(id),
+          userAPI.getUserTopics(),
+        ]);
+        
+        setPosts(postsData || []);
+        setGroups(groupsData || []);
+        setTopics(topicsData || []);
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [id]);
+
+  const handleEndorseClick = (skill) => {
+    if (!isOwnProfile) {
+      setSelectedSkill(skill);
+      setShowEndorseDialog(true);
+    }
+  };
+
+  const handleEndorseSubmit = async () => {
+    if (!selectedSkill) return;
+    try {
+      await userAPI.endorseSkill(user._id, selectedSkill._id, endorsementNote);
+      const userData = await userAPI.getUser(id);
+      setUser(userData);
+      setShowEndorseDialog(false);
+      setEndorsementNote('');
+      setSelectedSkill(null);
+    } catch (error) {
+      console.error('Error endorsing skill:', error);
+    }
+  };
+
+  if (loading) {
+    return <LoadingSpinner />;
+  }
+
+  if (!user) {
+    return (
+      <Container>
+        <Typography variant="h5" align="center" mt={4}>
+          Profile not found
+        </Typography>
+      </Container>
+    );
+  }
+
+  return (
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Card sx={{ mb: 4 }}>
+        <Box
+          sx={{
+            height: 200,
+            bgcolor: 'primary.light',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }}
+        />
+        
+        <CardContent sx={{ position: 'relative', mt: -8, px: 3, pb: 3 }}>
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={4}>
+              <Box sx={{ textAlign: 'center' }}>
+                <Avatar
+                  src={user.profilePicture}
+                  sx={{
+                    width: 180,
+                    height: 180,
+                    mx: 'auto',
+                    border: '4px solid white',
+                    mb: 2,
+                    bgcolor: getAvatarColor(user.firstName + ' ' + user.lastName),
+                    fontSize: '4rem'
+                  }}
+                >
+                  {user.firstName?.[0]}{user.lastName?.[0]}
+                </Avatar>
+                
+                <Typography variant="h4" sx={{ mb: 1, fontWeight: 'bold' }}>
+                  {user.firstName} {user.lastName}
+                </Typography>
+                
+                {user.currentPosition && (
+                  <Typography variant="h6" color="text.secondary" gutterBottom>
+                    {user.currentPosition}
+                    {user.company && ` at ${user.company}`}
+                  </Typography>
+                )}
+
+                {isOwnProfile && (
+                  <Button
+                    variant="contained"
+                    startIcon={<EditIcon />}
+                    sx={{ mt: 2 }}
+                  >
+                    Edit Profile
+                  </Button>
+                )}
+              </Box>
+            </Grid>
+
+            <Grid item xs={12} md={8}>
+              <Card sx={{ mb: 3 }}>
+                <CardContent>
+                  <Grid container spacing={3}>
+                    <Grid item xs={12} sm={6}>
+                      <Box display="flex" alignItems="center" gap={1} mb={2}>
+                        <SchoolIcon color="primary" />
+                        <Box>
+                          <Typography variant="subtitle2" color="text.secondary">
+                            Education
+                          </Typography>
+                          <Typography>
+                            {user.education?.[0]?.degree || 'Not specified'}
+                          </Typography>
+                        </Box>
+                      </Box>
+
+                      <Box display="flex" alignItems="center" gap={1} mb={2}>
+                        <LocationIcon color="primary" />
+                        <Box>
+                          <Typography variant="subtitle2" color="text.secondary">
+                            Location
+                          </Typography>
+                          <Typography>
+                            {user.location || 'Not specified'}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </Grid>
+
+                    <Grid item xs={12} sm={6}>
+                      <Box display="flex" alignItems="center" gap={1} mb={2}>
+                        <CalendarIcon color="primary" />
+                        <Box>
+                          <Typography variant="subtitle2" color="text.secondary">
+                            Joined
+                          </Typography>
+                          <Typography>
+                            {new Date(user.createdAt).toLocaleDateString()}
+                          </Typography>
+                        </Box>
+                      </Box>
+
+                      <Box display="flex" alignItems="center" gap={1} mb={2}>
+                        <GroupIcon color="primary" />
+                        <Box>
+                          <Typography variant="subtitle2" color="text.secondary">
+                            Groups
+                          </Typography>
+                          <Typography>{groups.length} joined</Typography>
+                        </Box>
+                      </Box>
+                    </Grid>
+                  </Grid>
+
+                  <Box mt={2}>
+                    <Typography variant="body1">
+                      {user.bio || 'No bio provided'}
+                    </Typography>
+                  </Box>
+                </CardContent>
+              </Card>
+
+              <Box sx={{ bgcolor: 'background.paper' }}>
+                <Tabs
+                  value={tabValue}
+                  onChange={(e, v) => setTabValue(v)}
+                  variant="scrollable"
+                  scrollButtons="auto"
+                >
+                  <Tab label="Skills" />
+                  <Tab label="Experience" />
+                  <Tab label="Education" />
+                  <Tab label="Posts" />
+                </Tabs>
+
+                <TabPanel value={tabValue} index={0}>
+                  {user.skills?.length > 0 ? (
+                    <Grid container spacing={2}>
+                      {user.skills.map((skill, index) => (
+                        <Grid item xs={12} sm={6} key={index}>
+                          <Paper variant="outlined" sx={{ p: 2 }}>
+                            <Box display="flex" justifyContent="space-between" alignItems="center">
+                              <Typography variant="subtitle1">
+                                {skill.name}
+                              </Typography>
+                              {!isOwnProfile && (
+                                <Button
+                                  size="small"
+                                  startIcon={<EndorseIcon />}
+                                  onClick={() => handleEndorseClick(skill)}
+                                >
+                                  Endorse
+                                </Button>
+                              )}
+                            </Box>
+                            <Chip
+                              size="small"
+                              variant="outlined"
+                              label={`${skill.endorsements?.length || 0} endorsements`}
+                              sx={{ mt: 1 }}
+                            />
+                          </Paper>
+                        </Grid>
+                      ))}
+                    </Grid>
+                  ) : (
+                    <Typography color="text.secondary">No skills added yet</Typography>
+                  )}
+                </TabPanel>
+
+                <TabPanel value={tabValue} index={1}>
+                  <Timeline>
+                    {user.experience?.map((exp, index) => (
+                      <TimelineItem key={index}>
+                        <TimelineOppositeContent color="text.secondary">
+                          {exp.startDate} - {exp.endDate || 'Present'}
+                        </TimelineOppositeContent>
+                        <TimelineSeparator>
+                          <TimelineDot color="primary">
+                            <WorkIcon />
+                          </TimelineDot>
+                          {index < user.experience.length - 1 && <TimelineConnector />}
+                        </TimelineSeparator>
+                        <TimelineContent>
+                          <Typography variant="subtitle1" fontWeight="bold">
+                            {exp.title} at {exp.company}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {exp.description}
+                          </Typography>
+                        </TimelineContent>
+                      </TimelineItem>
+                    ))}
+                  </Timeline>
+                </TabPanel>
+
+                <TabPanel value={tabValue} index={2}>
+                  <Timeline>
+                    {user.education?.map((edu, index) => (
+                      <TimelineItem key={index}>
+                        <TimelineOppositeContent color="text.secondary">
+                          {edu.startYear} - {edu.endYear || 'Present'}
+                        </TimelineOppositeContent>
+                        <TimelineSeparator>
+                          <TimelineDot color="primary">
+                            <SchoolIcon />
+                          </TimelineDot>
+                          {index < user.education.length - 1 && <TimelineConnector />}
+                        </TimelineSeparator>
+                        <TimelineContent>
+                          <Typography variant="subtitle1" fontWeight="bold">
+                            {edu.degree} in {edu.major}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {edu.institution}
+                          </Typography>
+                        </TimelineContent>
+                      </TimelineItem>
+                    ))}
+                  </Timeline>
+                </TabPanel>
+
+                <TabPanel value={tabValue} index={3}>
+                  <ActivityList items={posts} type="posts" />
+                </TabPanel>
+              </Box>
+            </Grid>
+          </Grid>
+        </CardContent>
+      </Card>
+
+      <Dialog open={showEndorseDialog} onClose={() => setShowEndorseDialog(false)}>
+        <DialogTitle>Endorse {selectedSkill?.name}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" gutterBottom>
+            Your endorsement helps others understand {user.firstName}'s expertise.
+          </Typography>
+          <TextField
+            fullWidth
+            multiline
+            rows={3}
+            value={endorsementNote}
+            onChange={(e) => setEndorsementNote(e.target.value)}
+            placeholder="Add an optional note about your experience..."
+            margin="normal"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowEndorseDialog(false)}>Cancel</Button>
+          <Button variant="contained" onClick={handleEndorseSubmit}>
+            Endorse
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Container>
+  );
+};
+
+export default Profile;

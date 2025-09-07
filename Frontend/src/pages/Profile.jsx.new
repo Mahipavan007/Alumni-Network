@@ -1,0 +1,347 @@
+import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
+import {
+  Container,
+  Grid,
+  Card,
+  CardContent,
+  Typography,
+  Box,
+  Avatar,
+  Button,
+  Chip,
+  Paper,
+  Divider,
+  useMediaQuery,
+  useTheme,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+} from '@mui/material';
+import {
+  Edit as EditIcon,
+  LocationOn as LocationIcon,
+  School as SchoolIcon,
+  Work as WorkIcon,
+  Email as EmailIcon,
+  Phone as PhoneIcon,
+  LinkedIn as LinkedInIcon,
+  CalendarMonth as CalendarIcon,
+  Group as GroupIcon,
+  Topic as TopicIcon,
+  Language as WebsiteIcon
+} from '@mui/icons-material';
+import { userAPI, postAPI } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
+import { formatDate, getAvatarColor } from '../utils/helpers';
+import LoadingSpinner from '../components/LoadingSpinner';
+
+const Profile = () => {
+  const { userId } = useParams();
+  const { currentUser } = useAuth();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [user, setUser] = useState(null);
+  const [posts, setPosts] = useState([]);
+  const [groups, setGroups] = useState([]);
+  const [topics, setTopics] = useState([]);
+  const [showEndorseDialog, setShowEndorseDialog] = useState(false);
+  const [selectedSkill, setSelectedSkill] = useState(null);
+  const [endorsementNote, setEndorsementNote] = useState('');
+  const isOwnProfile = !userId || userId === currentUser?._id;
+
+  const fetchProfileData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const userResponse = await userAPI.getProfile(userId || currentUser._id);
+      if (!userResponse.data.user) {
+        setError('Profile not found');
+        return;
+      }
+      setUser(userResponse.data.user);
+
+      const [postsRes, groupsRes, topicsRes] = await Promise.all([
+        postAPI.getUserPosts(userId || currentUser._id),
+        userAPI.getUserGroups(userId || currentUser._id),
+        userAPI.getUserTopics(userId || currentUser._id)
+      ]);
+
+      setPosts(postsRes.data?.posts || []);
+      setGroups(groupsRes.data?.groups || []);
+      setTopics(topicsRes.data?.topics || []);
+    } catch (error) {
+      console.error('Error fetching profile data:', error);
+      setError(error.response?.data?.message || 'Error loading profile');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProfileData();
+  }, [userId, currentUser]);
+
+  if (loading) return <LoadingSpinner />;
+  if (error) return <Typography color="error">{error}</Typography>;
+  if (!user) return null;
+
+  return (
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Card sx={{ mb: 4, borderRadius: 2, boxShadow: 2 }}>
+        {/* Cover Image */}
+        <Box
+          sx={{
+            height: 200,
+            bgcolor: 'primary.light',
+            backgroundImage: user.coverPicture ? `url(${user.coverPicture})` : 'none',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }}
+        />
+        
+        <CardContent sx={{ p: 3 }}>
+          <Grid container spacing={4}>
+            {/* Left Column - Profile Picture & Basic Info */}
+            <Grid item xs={12} md={4}>
+              <Box display="flex" flexDirection="column" alignItems="center" textAlign="center">
+                <Avatar
+                  src={user.profilePicture}
+                  sx={{
+                    width: 180,
+                    height: 180,
+                    border: '4px solid white',
+                    marginTop: -12,
+                    boxShadow: 2,
+                    bgcolor: getAvatarColor(user.firstName + ' ' + user.lastName),
+                    fontSize: '4rem'
+                  }}
+                >
+                  {user.firstName?.[0]}{user.lastName?.[0]}
+                </Avatar>
+                
+                <Typography variant="h4" sx={{ mt: 2, fontWeight: 'bold' }}>
+                  {user.firstName} {user.lastName}
+                </Typography>
+                
+                {user.currentPosition && (
+                  <Typography variant="h6" color="text.secondary" gutterBottom>
+                    {user.currentPosition}
+                    {user.company && ` at ${user.company}`}
+                  </Typography>
+                )}
+                
+                {isOwnProfile && (
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    startIcon={<EditIcon />}
+                    sx={{ mt: 2 }}
+                    fullWidth={isMobile}
+                  >
+                    Edit Profile
+                  </Button>
+                )}
+              </Box>
+            </Grid>
+
+            {/* Right Column - Detailed Information */}
+            <Grid item xs={12} md={8}>
+              {/* Basic Information */}
+              <Paper elevation={0} sx={{ p: 3, mb: 3, bgcolor: 'background.default' }}>
+                <Typography variant="h6" gutterBottom fontWeight="bold">
+                  Basic Information
+                </Typography>
+                <Grid container spacing={3}>
+                  <Grid item xs={12} sm={6}>
+                    <Box>
+                      <Box display="flex" alignItems="center" gap={1} mb={2}>
+                        <SchoolIcon color="primary" />
+                        <Box>
+                          <Typography variant="subtitle2" color="text.secondary">Education</Typography>
+                          <Typography>{user.major || 'Not specified'}</Typography>
+                        </Box>
+                      </Box>
+                      <Box display="flex" alignItems="center" gap={1} mb={2}>
+                        <CalendarIcon color="primary" />
+                        <Box>
+                          <Typography variant="subtitle2" color="text.secondary">Graduation Year</Typography>
+                          <Typography>{user.graduationYear || 'Not specified'}</Typography>
+                        </Box>
+                      </Box>
+                      <Box display="flex" alignItems="center" gap={1} mb={2}>
+                        <WorkIcon color="primary" />
+                        <Box>
+                          <Typography variant="subtitle2" color="text.secondary">Current Role</Typography>
+                          <Typography>{user.currentPosition || 'Not specified'}</Typography>
+                        </Box>
+                      </Box>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Box>
+                      <Box display="flex" alignItems="center" gap={1} mb={2}>
+                        <LocationIcon color="primary" />
+                        <Box>
+                          <Typography variant="subtitle2" color="text.secondary">Location</Typography>
+                          <Typography>{user.location || 'Not specified'}</Typography>
+                        </Box>
+                      </Box>
+                      <Box display="flex" alignItems="center" gap={1} mb={2}>
+                        <GroupIcon color="primary" />
+                        <Box>
+                          <Typography variant="subtitle2" color="text.secondary">Groups</Typography>
+                          <Typography>{groups.length} joined</Typography>
+                        </Box>
+                      </Box>
+                      <Box display="flex" alignItems="center" gap={1} mb={2}>
+                        <TopicIcon color="primary" />
+                        <Box>
+                          <Typography variant="subtitle2" color="text.secondary">Topics</Typography>
+                          <Typography>{topics.length} following</Typography>
+                        </Box>
+                      </Box>
+                    </Box>
+                  </Grid>
+                </Grid>
+              </Paper>
+
+              {/* About Section */}
+              <Paper elevation={0} sx={{ p: 3, mb: 3, bgcolor: 'background.default' }}>
+                <Typography variant="h6" gutterBottom fontWeight="bold">
+                  About
+                </Typography>
+                <Typography color={user.bio ? 'text.primary' : 'text.secondary'}>
+                  {user.bio || 'No bio provided yet.'}
+                </Typography>
+              </Paper>
+
+              {/* Contact Information */}
+              <Paper elevation={0} sx={{ p: 3, mb: 3, bgcolor: 'background.default' }}>
+                <Typography variant="h6" gutterBottom fontWeight="bold">
+                  Contact Information
+                </Typography>
+                <Grid container spacing={3}>
+                  <Grid item xs={12} sm={6}>
+                    <Box display="flex" alignItems="center" gap={1} mb={2}>
+                      <EmailIcon color="primary" />
+                      <Box>
+                        <Typography variant="subtitle2" color="text.secondary">Email</Typography>
+                        <Typography>{user.email}</Typography>
+                      </Box>
+                    </Box>
+                    {user.phone && (
+                      <Box display="flex" alignItems="center" gap={1} mb={2}>
+                        <PhoneIcon color="primary" />
+                        <Box>
+                          <Typography variant="subtitle2" color="text.secondary">Phone</Typography>
+                          <Typography>{user.phone}</Typography>
+                        </Box>
+                      </Box>
+                    )}
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    {user.linkedIn && (
+                      <Box display="flex" alignItems="center" gap={1} mb={2}>
+                        <LinkedInIcon color="primary" />
+                        <Box>
+                          <Typography variant="subtitle2" color="text.secondary">LinkedIn</Typography>
+                          <Typography>{user.linkedIn}</Typography>
+                        </Box>
+                      </Box>
+                    )}
+                    {user.website && (
+                      <Box display="flex" alignItems="center" gap={1} mb={2}>
+                        <WebsiteIcon color="primary" />
+                        <Box>
+                          <Typography variant="subtitle2" color="text.secondary">Website</Typography>
+                          <Typography>{user.website}</Typography>
+                        </Box>
+                      </Box>
+                    )}
+                  </Grid>
+                </Grid>
+              </Paper>
+
+              {/* Skills Section */}
+              {user.skills && user.skills.length > 0 && (
+                <Paper elevation={0} sx={{ p: 3, mb: 3, bgcolor: 'background.default' }}>
+                  <Typography variant="h6" gutterBottom fontWeight="bold">
+                    Skills & Expertise
+                  </Typography>
+                  <Box display="flex" gap={1} flexWrap="wrap">
+                    {user.skills.map((skill, index) => (
+                      <Chip
+                        key={index}
+                        label={skill.name}
+                        color="primary"
+                        variant="outlined"
+                        size="medium"
+                        onClick={() => {
+                          if (!isOwnProfile) {
+                            setSelectedSkill(skill);
+                            setShowEndorseDialog(true);
+                          }
+                        }}
+                      />
+                    ))}
+                  </Box>
+                </Paper>
+              )}
+            </Grid>
+          </Grid>
+        </CardContent>
+      </Card>
+
+      {/* Endorsement Dialog */}
+      <Dialog open={showEndorseDialog} onClose={() => setShowEndorseDialog(false)}>
+        <DialogTitle>Endorse {selectedSkill?.name}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" gutterBottom>
+            Your endorsement helps other alumni understand your peer's expertise.
+          </Typography>
+          <TextField
+            fullWidth
+            multiline
+            rows={3}
+            value={endorsementNote}
+            onChange={(e) => setEndorsementNote(e.target.value)}
+            placeholder="Add a note about their skills (optional)"
+            margin="normal"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowEndorseDialog(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={async () => {
+              if (!selectedSkill) return;
+              try {
+                await userAPI.endorseSkill(user._id, selectedSkill._id, endorsementNote);
+                // Refresh user data to get updated endorsements
+                fetchProfileData();
+                setShowEndorseDialog(false);
+                setEndorsementNote('');
+                setSelectedSkill(null);
+              } catch (error) {
+                console.error('Error endorsing skill:', error);
+              }
+            }}
+          >
+            Endorse
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Additional sections like posts, activities, etc. can be added here */}
+    </Container>
+  );
+};
+
+export default Profile;

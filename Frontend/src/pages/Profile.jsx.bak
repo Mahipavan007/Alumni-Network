@@ -1,0 +1,148 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Container,
+  Card,
+  CardContent,
+  Typography,
+  Box,
+  Avatar,
+  Grid,
+  Paper,
+} from '@mui/material';
+import {
+  School as SchoolIcon,
+  Email as EmailIcon,
+  CalendarMonth as CalendarIcon,
+  Edit as EditIcon,
+  LocationOn as LocationIcon,
+  Work as WorkIcon,
+  Phone as PhoneIcon,
+  LinkedIn as LinkedInIcon,
+  Group as GroupIcon,
+  Topic as TopicIcon,
+  ThumbUp as EndorseIcon,
+} from '@mui/icons-material';
+import { userAPI, postAPI } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
+import { getAvatarColor } from '../utils/helpers';
+import LoadingSpinner from '../components/LoadingSpinner';
+
+const Profile = () => {
+  const { currentUser } = useAuth();
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        if (currentUser && currentUser.id) {
+          const { data } = await userAPI.getProfile(currentUser.id);
+          setUser(data.user);
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [currentUser]);
+
+  if (loading || !currentUser) {
+    return <LoadingSpinner />;
+  }
+
+  return (
+    <Container maxWidth="md" sx={{ py: 4 }}>
+      <Card sx={{ mb: 4 }}>
+        <Box
+          sx={{
+            height: 150,
+            bgcolor: 'primary.light',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }}
+        />
+        
+        <CardContent sx={{ position: 'relative', mt: -8, px: 3, pb: 3 }}>
+          <Box sx={{ textAlign: 'center', mb: 4 }}>
+            <Avatar
+              src={user?.profilePicture || currentUser.profilePicture}
+              sx={{
+                width: 150,
+                height: 150,
+                mx: 'auto',
+                border: '4px solid white',
+                mb: 2,
+                bgcolor: getAvatarColor(user?.firstName || currentUser.firstName),
+              }}
+            />
+            <Typography variant="h4" gutterBottom>
+              {user?.firstName || currentUser.firstName} {user?.lastName || currentUser.lastName}
+            </Typography>
+            <Typography variant="body1" color="textSecondary" gutterBottom>
+              {user?.headline || currentUser.headline || 'Alumni'}
+            </Typography>
+          </Box>
+
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <Paper sx={{ p: 3 }}>
+                <Typography variant="h6" gutterBottom>Contact Information</Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <EmailIcon color="primary" sx={{ mr: 2 }} />
+                  <Typography>{user?.email || currentUser.email}</Typography>
+                </Box>
+                {(user?.phone || currentUser.phone) && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <PhoneIcon color="primary" sx={{ mr: 2 }} />
+                    <Typography>{user?.phone || currentUser.phone}</Typography>
+                  </Box>
+                )}
+                {(user?.location || currentUser.location) && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <LocationIcon color="primary" sx={{ mr: 2 }} />
+                    <Typography>{user?.location || currentUser.location}</Typography>
+                  </Box>
+                )}
+                {(user?.linkedin || currentUser.linkedin) && (
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <LinkedInIcon color="primary" sx={{ mr: 2 }} />
+                    <Typography>{user?.linkedin || currentUser.linkedin}</Typography>
+                  </Box>
+                )}
+              </Paper>
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Paper sx={{ p: 3 }}>
+                <Typography variant="h6" gutterBottom>Education & Work</Typography>
+                {(user?.education || currentUser.education) && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <SchoolIcon color="primary" sx={{ mr: 2 }} />
+                    <Typography>{user?.education || currentUser.education}</Typography>
+                  </Box>
+                )}
+                {(user?.work || currentUser.work) && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <WorkIcon color="primary" sx={{ mr: 2 }} />
+                    <Typography>{user?.work || currentUser.work}</Typography>
+                  </Box>
+                )}
+                {(user?.graduationYear || currentUser.graduationYear) && (
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <CalendarIcon color="primary" sx={{ mr: 2 }} />
+                    <Typography>Class of {user?.graduationYear || currentUser.graduationYear}</Typography>
+                  </Box>
+                )}
+              </Paper>
+            </Grid>
+          </Grid>
+        </CardContent>
+      </Card>
+    </Container>
+  );
+};
+
+export default Profile;

@@ -1,0 +1,493 @@
+import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
+import {
+  Container,
+  Grid,
+  Card,
+  CardContent,
+  Typography,
+  Box,
+  Avatar,
+  Button,
+  Chip,
+  Paper,
+  useMediaQuery,
+  useTheme,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Stack,
+  Link,
+  Tabs,
+  Tab,
+  List,
+  ListItem,
+  ListItemText,
+  Timeline,
+  TimelineItem,
+  TimelineOppositeContent,
+  TimelineSeparator,
+  TimelineDot,
+  TimelineConnector,
+  TimelineContent,
+} from '@mui/material';
+import {
+  Edit as EditIcon,
+  LocationOn as LocationIcon,
+  School as SchoolIcon,
+  Work as WorkIcon,
+  Email as EmailIcon,
+  Phone as PhoneIcon,
+  LinkedIn as LinkedInIcon,
+  CalendarMonth as CalendarIcon,
+  Group as GroupIcon,
+  Topic as TopicIcon,
+  Language as WebsiteIcon,
+  GitHub as GitHubIcon,
+  EmojiEvents as AchievementIcon,
+  Code as ProjectIcon,
+  ThumbUp as EndorseIcon,
+  Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon,
+} from '@mui/icons-material';
+import { userAPI } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
+import { getAvatarColor } from '../utils/helpers';
+import LoadingSpinner from '../components/LoadingSpinner';
+
+const TabPanel = (props) => {
+  const { children, value, index, ...other } = props;
+
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={\`tabpanel-\${index}\`}
+      aria-labelledby={\`tab-\${index}\`}
+      {...other}
+    >
+      {value === index && (
+        <Box sx={{ p: 3 }}>
+          {children}
+        </Box>
+      )}
+    </div>
+  );
+};
+
+const ActivityList = ({ items = [], type }) => {
+  if (!items.length) {
+    return (
+      <Typography color="text.secondary">
+        No {type} to display
+      </Typography>
+    );
+  }
+
+  return (
+    <Stack spacing={2}>
+      {items.map((item, index) => (
+        <Paper key={index} variant="outlined" sx={{ p: 2 }}>
+          <Typography variant="subtitle1">{item.title || item.name}</Typography>
+          {item.description && (
+            <Typography variant="body2" color="text.secondary">
+              {item.description}
+            </Typography>
+          )}
+        </Paper>
+      ))}
+    </Stack>
+  );
+};
+
+const ProfileCard = ({ user, isOwnProfile, onEdit }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
+  return (
+    <Card sx={{ mb: 3, borderRadius: 2, boxShadow: 1 }}>
+      <Box
+        sx={{
+          height: 200,
+          bgcolor: 'primary.light',
+          backgroundImage: user.coverPicture ? \`url(\${user.coverPicture})\` : 'none',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      />
+      
+      <CardContent sx={{ position: 'relative', mt: -8, p: 3 }}>
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={4}>
+            <Box display="flex" flexDirection="column" alignItems="center" textAlign="center">
+              <Avatar
+                src={user.profilePicture}
+                sx={{
+                  width: 180,
+                  height: 180,
+                  border: '4px solid white',
+                  marginTop: -12,
+                  boxShadow: 2,
+                  bgcolor: getAvatarColor(user.firstName + ' ' + user.lastName),
+                  fontSize: '4rem'
+                }}
+              >
+                {user.firstName?.[0]}{user.lastName?.[0]}
+              </Avatar>
+              
+              <Typography variant="h4" sx={{ mt: 2, fontWeight: 'bold' }}>
+                {user.firstName} {user.lastName}
+              </Typography>
+              
+              {user.currentPosition && (
+                <Typography variant="h6" color="text.secondary" gutterBottom>
+                  {user.currentPosition}
+                  {user.company && ` at ${user.company}`}
+                </Typography>
+              )}
+              
+              {isOwnProfile && (
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<EditIcon />}
+                  onClick={onEdit}
+                  sx={{ mt: 2 }}
+                  fullWidth={isMobile}
+                >
+                  Edit Profile
+                </Button>
+              )}
+            </Box>
+          </Grid>
+          
+          <Grid item xs={12} md={8}>
+            <Paper elevation={0} sx={{ p: 3, bgcolor: 'background.default' }}>
+              <Grid container spacing={3}>
+                <Grid item xs={12} sm={6}>
+                  <Box>
+                    <Box display="flex" alignItems="center" gap={1} mb={2}>
+                      <SchoolIcon color="primary" />
+                      <Box>
+                        <Typography variant="subtitle2" color="text.secondary">Education</Typography>
+                        <Typography>{user.major || 'Not specified'}</Typography>
+                      </Box>
+                    </Box>
+                    
+                    <Box display="flex" alignItems="center" gap={1} mb={2}>
+                      <CalendarIcon color="primary" />
+                      <Box>
+                        <Typography variant="subtitle2" color="text.secondary">Year</Typography>
+                        <Typography>{user.graduationYear || 'Not specified'}</Typography>
+                      </Box>
+                    </Box>
+                    
+                    <Box display="flex" alignItems="center" gap={1} mb={2}>
+                      <LocationIcon color="primary" />
+                      <Box>
+                        <Typography variant="subtitle2" color="text.secondary">Location</Typography>
+                        <Typography>{user.location || 'Not specified'}</Typography>
+                      </Box>
+                    </Box>
+                  </Box>
+                </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                  <Box>
+                    <Box display="flex" alignItems="center" gap={1} mb={2}>
+                      <EmailIcon color="primary" />
+                      <Box>
+                        <Typography variant="subtitle2" color="text.secondary">Email</Typography>
+                        <Typography>{user.email}</Typography>
+                      </Box>
+                    </Box>
+                    
+                    {user.phone && (
+                      <Box display="flex" alignItems="center" gap={1} mb={2}>
+                        <PhoneIcon color="primary" />
+                        <Box>
+                          <Typography variant="subtitle2" color="text.secondary">Phone</Typography>
+                          <Typography>{user.phone}</Typography>
+                        </Box>
+                      </Box>
+                    )}
+                    
+                    {user.linkedIn && (
+                      <Box display="flex" alignItems="center" gap={1} mb={2}>
+                        <LinkedInIcon color="primary" />
+                        <Box>
+                          <Typography variant="subtitle2" color="text.secondary">LinkedIn</Typography>
+                          <Link href={user.linkedIn} target="_blank" rel="noopener noreferrer">
+                            View Profile
+                          </Link>
+                        </Box>
+                      </Box>
+                    )}
+                  </Box>
+                </Grid>
+              </Grid>
+            </Paper>
+          </Grid>
+        </Grid>
+      </CardContent>
+    </Card>
+  );
+};
+
+const Profile = () => {
+  const { id } = useParams();
+  const { currentUser } = useAuth();
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [tabValue, setTabValue] = useState(0);
+  const [posts, setPosts] = useState([]);
+  const [groups, setGroups] = useState([]);
+  const [topics, setTopics] = useState([]);
+  const [showEndorseDialog, setShowEndorseDialog] = useState(false);
+  const [selectedSkill, setSelectedSkill] = useState(null);
+  const [endorsementNote, setEndorsementNote] = useState('');
+  
+  const isOwnProfile = currentUser?.id === id;
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const userData = await userAPI.getUser(id);
+        setUser(userData);
+        
+        // Fetch additional data
+        const [postsData, groupsData, topicsData] = await Promise.all([
+          userAPI.getUserPosts(id),
+          userAPI.getUserGroups(id),
+          userAPI.getUserTopics(id),
+        ]);
+        
+        setPosts(postsData || []);
+        setGroups(groupsData || []);
+        setTopics(topicsData || []);
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [id]);
+
+  const handleTabChange = (event, newValue) => {
+    setTabValue(newValue);
+  };
+
+  const handleEndorseClick = (skill) => {
+    if (!isOwnProfile) {
+      setSelectedSkill(skill);
+      setShowEndorseDialog(true);
+    }
+  };
+
+  const handleEndorseSubmit = async () => {
+    if (!selectedSkill) return;
+    
+    try {
+      await userAPI.endorseSkill(user._id, selectedSkill._id, endorsementNote);
+      const userData = await userAPI.getUser(id);
+      setUser(userData);
+      setShowEndorseDialog(false);
+      setEndorsementNote('');
+      setSelectedSkill(null);
+    } catch (error) {
+      console.error('Error endorsing skill:', error);
+    }
+  };
+
+  const handleEditProfile = () => {
+    // Handle edit profile
+    console.log('Edit profile');
+  };
+
+  if (loading) {
+    return <LoadingSpinner />;
+  }
+
+  if (!user) {
+    return (
+      <Container>
+        <Typography variant="h5" align="center" mt={4}>
+          User not found
+        </Typography>
+      </Container>
+    );
+  }
+
+  return (
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+      <ProfileCard
+        user={user}
+        isOwnProfile={isOwnProfile}
+        onEdit={handleEditProfile}
+      />
+      
+      <Card>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+          <Tabs
+            value={tabValue}
+            onChange={handleTabChange}
+            aria-label="profile sections"
+            variant="scrollable"
+            scrollButtons="auto"
+          >
+            <Tab label="Experience" />
+            <Tab label="Education" />
+            <Tab label="Skills" />
+            <Tab label="Posts" />
+            <Tab label="Groups" />
+            <Tab label="Topics" />
+          </Tabs>
+        </Box>
+
+        <CardContent>
+          <TabPanel value={tabValue} index={0}>
+            {user.experience?.length > 0 ? (
+              <Timeline>
+                {user.experience.map((exp, index) => (
+                  <TimelineItem key={index}>
+                    <TimelineOppositeContent color="text.secondary">
+                      {exp.startDate} - {exp.endDate || 'Present'}
+                    </TimelineOppositeContent>
+                    <TimelineSeparator>
+                      <TimelineDot color="primary">
+                        <WorkIcon />
+                      </TimelineDot>
+                      {index < user.experience.length - 1 && <TimelineConnector />}
+                    </TimelineSeparator>
+                    <TimelineContent>
+                      <Typography variant="subtitle1" fontWeight="bold">
+                        {exp.title} at {exp.company}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {exp.location}
+                      </Typography>
+                      {exp.description && (
+                        <Typography variant="body2" sx={{ mt: 1 }}>
+                          {exp.description}
+                        </Typography>
+                      )}
+                    </TimelineContent>
+                  </TimelineItem>
+                ))}
+              </Timeline>
+            ) : (
+              <Typography color="text.secondary">No experience added yet</Typography>
+            )}
+          </TabPanel>
+
+          <TabPanel value={tabValue} index={1}>
+            {user.education?.length > 0 ? (
+              <Timeline>
+                {user.education.map((edu, index) => (
+                  <TimelineItem key={index}>
+                    <TimelineOppositeContent color="text.secondary">
+                      {edu.startYear} - {edu.endYear || 'Present'}
+                    </TimelineOppositeContent>
+                    <TimelineSeparator>
+                      <TimelineDot color="primary">
+                        <SchoolIcon />
+                      </TimelineDot>
+                      {index < user.education.length - 1 && <TimelineConnector />}
+                    </TimelineSeparator>
+                    <TimelineContent>
+                      <Typography variant="subtitle1" fontWeight="bold">
+                        {edu.degree} in {edu.major}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {edu.institution}
+                      </Typography>
+                    </TimelineContent>
+                  </TimelineItem>
+                ))}
+              </Timeline>
+            ) : (
+              <Typography color="text.secondary">No education details added yet</Typography>
+            )}
+          </TabPanel>
+
+          <TabPanel value={tabValue} index={2}>
+            {user.skills?.length > 0 ? (
+              <Grid container spacing={2}>
+                {user.skills.map((skill, index) => (
+                  <Grid item xs={12} sm={6} key={index}>
+                    <Paper variant="outlined" sx={{ p: 2 }}>
+                      <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+                        <Typography variant="subtitle1" fontWeight="bold">
+                          {skill.name}
+                        </Typography>
+                        {!isOwnProfile && (
+                          <Button
+                            size="small"
+                            startIcon={<EndorseIcon />}
+                            onClick={() => handleEndorseClick(skill)}
+                          >
+                            Endorse
+                          </Button>
+                        )}
+                      </Box>
+                      <Chip
+                        label={\`\${skill.endorsements?.length || 0} endorsements\`}
+                        size="small"
+                        variant="outlined"
+                      />
+                    </Paper>
+                  </Grid>
+                ))}
+              </Grid>
+            ) : (
+              <Typography color="text.secondary">No skills added yet</Typography>
+            )}
+          </TabPanel>
+
+          <TabPanel value={tabValue} index={3}>
+            <ActivityList items={posts} type="posts" />
+          </TabPanel>
+
+          <TabPanel value={tabValue} index={4}>
+            <ActivityList items={groups} type="groups" />
+          </TabPanel>
+
+          <TabPanel value={tabValue} index={5}>
+            <ActivityList items={topics} type="topics" />
+          </TabPanel>
+        </CardContent>
+      </Card>
+
+      {/* Endorse Skill Dialog */}
+      <Dialog open={showEndorseDialog} onClose={() => setShowEndorseDialog(false)}>
+        <DialogTitle>Endorse {selectedSkill?.name}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" gutterBottom>
+            Your endorsement helps other alumni understand {user.firstName}'s expertise level.
+          </Typography>
+          <TextField
+            fullWidth
+            multiline
+            rows={3}
+            value={endorsementNote}
+            onChange={(e) => setEndorsementNote(e.target.value)}
+            placeholder="Optional: Add a note about your experience..."
+            margin="normal"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowEndorseDialog(false)}>Cancel</Button>
+          <Button variant="contained" color="primary" onClick={handleEndorseSubmit}>
+            Endorse
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Container>
+  );
+};
+
+export default Profile;

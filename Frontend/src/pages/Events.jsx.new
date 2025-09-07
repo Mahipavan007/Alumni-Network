@@ -1,0 +1,223 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  Container,
+  Grid,
+  Card,
+  CardContent,
+  Typography,
+  Box,
+  TextField,
+  InputAdornment,
+  Button,
+  Avatar,
+  Chip,
+  IconButton,
+  Menu,
+  MenuItem,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Fab,
+  useMediaQuery,
+  useTheme,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem as SelectMenuItem,
+  ToggleButton,
+  ToggleButtonGroup
+} from '@mui/material';
+import {
+  Search as SearchIcon,
+  Add as AddIcon,
+  Event as EventIcon,
+  MoreVert as MoreVertIcon,
+  LocationOn as LocationIcon,
+  CalendarMonth as CalendarIcon,
+  AccessTime as TimeIcon,
+  People as PeopleIcon,
+  CheckCircle as CheckIcon,
+  Cancel as CancelIcon,
+  HelpOutline as MaybeIcon,
+  DateRange as DateRangeIcon,
+  ViewList as ListIcon,
+  ViewModule as CalendarViewIcon
+} from '@mui/icons-material';
+import Calendar from '../components/Calendar';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
+import { eventAPI } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
+import { formatDate, formatTime, getAvatarColor, debounce } from '../utils/helpers';
+import LoadingSpinner from '../components/LoadingSpinner';
+
+const Events = () => {
+  const navigate = useNavigate();
+  const [viewMode, setViewMode] = useState('list');
+  const [events, setEvents] = useState([]);
+  const [userEvents, setUserEvents] = useState([]);
+  const [userRSVPs, setUserRSVPs] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterType, setFilterType] = useState('upcoming');
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(null);
+  const { user } = useAuth();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+
+  useEffect(() => {
+    fetchEvents();
+    fetchUserEvents();
+    fetchUserRSVPs();
+  }, [filterType]);
+
+  const fetchEvents = async (search = '') => {
+    try {
+      const params = {
+        ...(search && { search }),
+        filter: filterType
+      };
+      const response = await eventAPI.getEvents(params);
+      setEvents(response.data.events);
+    } catch (error) {
+      console.error('Error fetching events:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchUserEvents = async () => {
+    try {
+      const response = await eventAPI.getUserEvents();
+      setUserEvents(response.data.events);
+    } catch (error) {
+      console.error('Error fetching user events:', error);
+    }
+  };
+
+  const fetchUserRSVPs = async () => {
+    try {
+      const response = await eventAPI.getUserRSVPs();
+      const rsvpMap = {};
+      response.data.rsvps.forEach(rsvp => {
+        rsvpMap[rsvp.event._id] = rsvp.status;
+      });
+      setUserRSVPs(rsvpMap);
+    } catch (error) {
+      console.error('Error fetching user RSVPs:', error);
+    }
+  };
+
+  const handleViewModeChange = (event, newMode) => {
+    if (newMode !== null) {
+      setViewMode(newMode);
+    }
+  };
+
+  const handleEventClick = (event) => {
+    navigate(`/events/${event._id}`);
+  };
+
+  const handleDateClick = (date) => {
+    setSelectedDate(date);
+    setCreateDialogOpen(true);
+  };
+
+  const handleCreateEvent = async (eventData) => {
+    try {
+      const response = await eventAPI.createEvent(eventData);
+      setEvents(prevEvents => [response.data.event, ...prevEvents]);
+      setCreateDialogOpen(false);
+    } catch (error) {
+      console.error('Error creating event:', error);
+    }
+  };
+
+  const handleRSVP = async (eventId, currentResponse) => {
+    try {
+      const newStatus = !currentResponse ? 'yes' : 
+        currentResponse === 'yes' ? 'no' : 
+        currentResponse === 'no' ? 'maybe' : null;
+      
+      if (newStatus) {
+        await eventAPI.rsvpToEvent(eventId, { status: newStatus });
+        setUserRSVPs(prev => ({ ...prev, [eventId]: newStatus }));
+      }
+    } catch (error) {
+      console.error('Error updating RSVP:', error);
+    }
+  };
+
+  const getUserResponse = (eventId) => userRSVPs[eventId] || null;
+
+  if (loading) {
+    return <LoadingSpinner />;
+  }
+
+  return (
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4" component="h1">
+          Events
+        </Typography>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <ToggleButtonGroup
+            value={viewMode}
+            exclusive
+            onChange={handleViewModeChange}
+            aria-label="view mode"
+          >
+            <ToggleButton value="list" aria-label="list view">
+              <ListIcon />
+            </ToggleButton>
+            <ToggleButton value="calendar" aria-label="calendar view">
+              <CalendarViewIcon />
+            </ToggleButton>
+          </ToggleButtonGroup>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<AddIcon />}
+            onClick={() => setCreateDialogOpen(true)}
+          >
+            Create Event
+          </Button>
+        </Box>
+      </Box>
+
+      {viewMode === 'calendar' ? (
+        <Calendar 
+          events={events}
+          onEventClick={handleEventClick}
+          onDateClick={handleDateClick}
+        />
+      ) : (
+        <Grid container spacing={3}>
+          {events.map((event) => (
+            <Grid item xs={12} sm={6} md={4} key={event._id}>
+              <EventCard 
+                event={event} 
+                onRSVP={handleRSVP} 
+                userResponse={getUserResponse(event._id)}
+                onClick={() => handleEventClick(event)}
+              />
+            </Grid>
+          ))}
+        </Grid>
+      )}
+
+      <CreateEventDialog
+        open={createDialogOpen}
+        onClose={() => setCreateDialogOpen(false)}
+        selectedDate={selectedDate}
+        onSubmit={handleCreateEvent}
+      />
+    </Container>
+  );
+};
+
+export default Events;

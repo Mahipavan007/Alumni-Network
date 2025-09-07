@@ -1,0 +1,118 @@
+import React from 'react';
+import {
+  Container,
+  Card,
+  CardContent,
+  Typography,
+  Box,
+  Avatar,
+  Grid,
+  Paper,
+} from '@mui/material';
+import {
+  School as SchoolIcon,
+  Email as EmailIcon,
+  CalendarMonth as CalendarIcon,
+} from '@mui/icons-material';
+import { useAuth } from '../contexts/AuthContext';
+import { getAvatarColor } from '../utils/helpers';
+import LoadingSpinner from '../components/LoadingSpinner';
+
+const Profile = () => {
+  const { currentUser } = useAuth();
+
+  if (!currentUser) {
+    return <LoadingSpinner />;
+  }
+
+  return (
+    <Container maxWidth="md" sx={{ py: 4 }}>
+      <Card sx={{ mb: 4 }}>
+        <Box
+          sx={{
+            height: 150,
+            bgcolor: 'primary.light',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }}
+        />
+        
+        <CardContent sx={{ position: 'relative', mt: -8, px: 3, pb: 3 }}>
+          <Box sx={{ textAlign: 'center', mb: 4 }}>
+            <Avatar
+              src={currentUser.profilePicture}
+              sx={{
+                width: 150,
+                height: 150,
+                mx: 'auto',
+                border: '4px solid white',
+                mb: 2,
+                bgcolor: getAvatarColor(currentUser.firstName + ' ' + currentUser.lastName),
+                fontSize: '3rem'
+              }}
+            >
+              {currentUser.firstName?.[0]}{currentUser.lastName?.[0]}
+            </Avatar>
+            
+            <Typography variant="h4" sx={{ mb: 1, fontWeight: 'bold' }}>
+              {currentUser.firstName} {currentUser.lastName}
+            </Typography>
+            
+            {currentUser.currentPosition && (
+              <Typography variant="h6" color="text.secondary" gutterBottom>
+                {currentUser.currentPosition}
+                {currentUser.company && ` at ${currentUser.company}`}
+              </Typography>
+            )}
+          </Box>
+
+          <Paper sx={{ p: 3 }}>
+            <Grid container spacing={3}>
+              <Grid item xs={12} sm={6}>
+                <Box display="flex" alignItems="center" gap={1} mb={2}>
+                  <SchoolIcon color="primary" />
+                  <Box>
+                    <Typography variant="subtitle2" color="text.secondary">
+                      Education
+                    </Typography>
+                    <Typography>
+                      {currentUser.course || currentUser.major || 'Not specified'}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Class of {currentUser.graduationYear || 'Not specified'}
+                    </Typography>
+                  </Box>
+                </Box>
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <Box display="flex" alignItems="center" gap={1} mb={2}>
+                  <EmailIcon color="primary" />
+                  <Box>
+                    <Typography variant="subtitle2" color="text.secondary">
+                      Email
+                    </Typography>
+                    <Typography>{currentUser.email}</Typography>
+                  </Box>
+                </Box>
+              </Grid>
+
+              <Grid item xs={12}>
+                <Box>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    About
+                  </Typography>
+                  <Typography>
+                    {currentUser.bio || 'No bio provided yet.'}
+                  </Typography>
+                </Box>
+              </Grid>
+            </Grid>
+          </Paper>
+        </CardContent>
+      </Card>
+    </Container>
+  );
+};
+
+export default Profile;
