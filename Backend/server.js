@@ -101,17 +101,6 @@ mongoose.connect(MONGODB_URI, {
 // Serve uploaded files
 app.use('/uploads', express.static('uploads'));
 
-// Register routes
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/post', require('./routes/post'));
-app.use('/api/user', require('./routes/user'));
-app.use('/api/group', require('./routes/group'));
-app.use('/api/event', require('./routes/event'));
-app.use('/api/topic', require('./routes/topic'));
-app.use('/api/resource', require('./routes/resource'));
-app.use('/api/message', require('./routes/message'));
-app.use('/api/notification', require('./routes/notification'));
-
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'OK', message: 'Alumni Network API is running' });
